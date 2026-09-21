@@ -1,0 +1,6 @@
+{
+  "name": "Power Flying Bird",
+  "description": "A fast-paced 2D cyber arcade shoot-'em-up with smooth hover flight, laser combat, procedural synth audio, and neon visuals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

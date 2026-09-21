@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Power Flying Bird</title>
+  <meta name="description" content="A fast-paced 2D cyber arcade shoot-'em-up with smooth hover flight, laser combat, procedural synth audio, and neon visuals." />
+  <meta property="og:title" content="Power Flying Bird" />
+  <meta property="og:description" content="A fast-paced 2D cyber arcade shoot-'em-up with smooth hover flight, laser combat, procedural synth audio, and neon visuals." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 30%, #0d0920 0%, #06050e 100%);
+      color: #e2e8f0;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 8px;
+    }
+
+    /* Outer Cabinet Container */
+    #game-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      height: 600px;
+      max-height: calc(100vh - 16px);
+      aspect-ratio: 400 / 600;
+      background: #070714;
+      border-radius: 18px;
+      box-shadow: 
+        0 0 0 1px rgba(0, 240, 255, 0.25),
+        0 0 30px rgba(0, 240, 255, 0.15),
+        0 25px 60px rgba(0, 0, 0, 0.9);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background-color: #070714;
+      cursor: crosshair;
+    }
+
+    /* On-Screen Touch Controls */
+    #touch-controls {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 16px 14px;
+      z-index: 10;
+    }
+
+    .touch-btn {
+      pointer-events: auto;
+      background: rgba(14, 20, 38, 0.65);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      border-radius: 14px;
+      color: #00f0ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(0, 240, 255, 0.1);
+      backdrop-filter: blur(4px);
+      transition: transform 0.08s ease, background 0.1s, border-color 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .touch-btn:active, .touch-btn.active {
+      transform: scale(0.92);
+      background: rgba(0, 240, 255, 0.3);
+      border-color: #00f0ff;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+      color: #ffffff;
+    }
+
+    .dpad-col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .flight-btn {
+      width: 62px;
+      height: 52px;
+      font-size: 18px;
+    }
+
+    .fire-btn {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border-color: rgba(255, 0, 128, 0.5);
+      color: #ff2a85;
+      font-size: 14px;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 0 12px rgba(255, 0, 128, 0.15);
+      margin-bottom: 8px;
+    }
+
+    .fire-btn:active, .fire-btn.active {
+      background: rgba(255, 42, 133, 0.35);
+      border-color: #ff2a85;
+      color: #fff;
+      box-shadow: 0 0 25px rgba(255, 42, 133, 0.6);
+    }
+
+    /* Top Action Bar (Audio Mute, Info) */
+    #top-bar {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      z-index: 20;
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: rgba(10, 15, 30, 0.7);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      color: #00f0ff;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 15px;
+      backdrop-filter: blur(4px);
+      transition: all 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(0, 240, 255, 0.2);
+      border-color: #00f0ff;
+    }
+
+    /* Subtle Scanline Overlay for Cyber Arcade Vibe */
+    #game-wrapper::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(rgba(18, 16, 38, 0) 50%, rgba(0, 0, 0, 0.22) 50%);
+      background-size: 100% 4px;
+      z-index: 5;
+      opacity: 0.65;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-wrapper">
+    <div id="top-bar">
+      <button id="mute-btn" class="icon-btn" title="Toggle Sound (M)" aria-label="Toggle Sound">🔊</button>
+    </div>
+
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+    <div id="touch-controls">
+      <div class="dpad-col">
+        <button id="btn-up" class="touch-btn flight-btn" aria-label="Fly Up">▲</button>
+        <button id="btn-down" class="touch-btn flight-btn" aria-label="Fly Down">▼</button>
+      </div>
+      <button id="btn-fire" class="touch-btn fire-btn" aria-label="Fire Lasers">⚡ FIRE</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // --- CANVAS & SCALING SETUP ---
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const wrapper = document.getElementById('game-wrapper');
+
+      const VIRTUAL_WIDTH = 400;
+      const VIRTUAL_HEIGHT = 600;
+      let dpr = window.devicePixelRatio || 1;
+
+      function resizeCanvas() {
+        dpr = window.devicePixelRatio || 1;
+        canvas.width = VIRTUAL_WIDTH * dpr;
+        canvas.height = VIRTUAL_HEIGHT * dpr;
+        ctx.resetTransform();
+        ctx.scale(dpr, dpr);
+      }
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      // --- PROCEDURAL AUDIO SYNTHESIZER (Web Audio API) ---
+      let audioCtx = null;
+      let isMuted = false;
+
+      function initAudio() {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+          }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      }
+
+      const muteBtn = document.getElementById('mute-btn');
+      function toggleMute() {
+        initAudio();
+        isMuted = !isMuted;
+        muteBtn.textContent = isMuted ? '🔇' : '🔊';
+      }
+      muteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMute();
+      });
+
+      function playLaserSound() {
+        if (isMuted || !audioCtx) return;
+        try {
+          const t = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(880, t);
+          osc.frequency.exponentialRampToValueAtTime(140, t + 0.12);
+
+          gain.gain.setValueAtTime(0.18, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(t);
+          osc.stop(t + 0.13);
+        } catch (err) {}
+      }
+
+      function playMonsterExplosionSound() {
+        if (isMuted || !audioCtx) return;
+        try {
+          const t = audioCtx.currentTime;
+          // Noise buffer
+          const bufferSize = Math.floor(audioCtx.sampleRate * 0.25);
+          const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+          }
+
+          const noise = audioCtx.createBufferSource();
+          noise.buffer = buffer;
+
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(900, t);
+          filter.frequency.exponentialRampToValueAtTime(80, t + 0.25);
+
+          const gain = audioCtx.createGain();
+          gain.gain.setValueAtTime(0.35, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          noise.start(t);
+          noise.stop(t + 0.26);
+
+          // Sub-rumble punch
+          const sub = audioCtx.createOscillator();
+          const subGain = audioCtx.createGain();
+          sub.type = 'sine';
+          sub.frequency.setValueAtTime(120, t);
+          sub.frequency.exponentialRampToValueAtTime(35, t + 0.2);
+          subGain.gain.setValueAtTime(0.25, t);
+          subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+          sub.connect(subGain);
+          subGain.connect(audioCtx.destination);
+          sub.start(t);
+          sub.stop(t + 0.21);
+        } catch (err) {}
+      }
+
+      function playGateScoreSound() {
+        if (isMuted || !audioCtx) return;
+        try {
+          const t = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(587.33, t); // D5
+          osc.frequency.setValueAtTime(880, t + 0.08); // A5
+
+          gain.gain.setValueAtTime(0.18, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(t);
+          osc.stop(t + 0.23);
+        } catch (err) {}
+      }
+
+      function playCrashSound() {
+        if (isMuted || !audioCtx) return;
+        try {
+          const t = audioCtx.currentTime;
+          const bufferSize = Math.floor(audioCtx.sampleRate * 0.45);
+          const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.4));
+          }
+
+          const noise = audioCtx.createBufferSource();
+          noise.buffer = buffer;
+
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(450, t);
+          filter.frequency.exponentialRampToValueAtTime(40, t + 0.45);
+
+          const gain = audioCtx.createGain();
+          gain.gain.setValueAtTime(0.5, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          noise.start(t);
+          noise.stop(t + 0.46);
+
+          const saw = audioCtx.createOscillator();
+          const sawGain = audioCtx.createGain();
+          saw.type = 'sawtooth';
+          saw.frequency.setValueAtTime(90, t);
+          saw.frequency.exponentialRampToValueAtTime(25, t + 0.35);
+          sawGain.gain.setValueAtTime(0.3, t);
+          sawGain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+          saw.connect(sawGain);
+          sawGain.connect(audioCtx.destination);
+          saw.start(t);
+          saw.stop(t + 0.36);
+        } catch (err) {}
+      }
+
+      // --- GAME STATE VARIABLES ---
+      const STATES = { START: 0, PLAYING: 1, GAMEOVER: 2 };
+      let gameState = STATES.START;
+
+      let score = 0;
+      let highScore = 0;
+      try {
+        highScore = parseInt(localStorage.getItem('power_flying_bird_hi') || '0', 10) || 0;
+      } catch (e) {
+        highScore = 0;
+      }
+
+      let isNewHighScore = false;
+      let gameOverTime = 0;
+      let screenShake = 0;
+      let globalTime = 0;
+      let distanceTravelled = 0;
+
+      // Bounds
+      const CEILING_Y = 42;
+      const FLOOR_Y = 558;
+
+      // --- PLAYER (POWER BIRD) ---
+      const player = {
+        x: 80,
+        y: 300,
+        vy: 0,
+        radius: 17,
+        accel: 950,
+        maxSpeed: 340,
+        damping: 0.88,
+        angle: 0,
+        wingAngle: 0,
+        lastShootTime: 0,
+        shootCooldown: 0.15, // 150ms
+        reset() {
+          this.x = 80;
+          this.y = 300;
+          this.vy = 0;
+          this.angle = 0;
+          this.wingAngle = 0;
+          this.lastShootTime = 0;
+        }
+      };
+
+      // Input tracking
+      const input = {
+        up: false,
+        down: false,
+        fire: false
+      };
+
+      // --- PARALLAX BACKGROUND DATA ---
+      const starsFar = [];
+      const starsMid = [];
+      const starsNear = [];
+
+      for (let i = 0; i < 35; i++) {
+        starsFar.push({ x: Math.random() * VIRTUAL_WIDTH, y: Math.random() * VIRTUAL_HEIGHT, s: 0.8 + Math.random() * 0.8, a: Math.random() });
+      }
+      for (let i = 0; i < 25; i++) {
+        starsMid.push({ x: Math.random() * VIRTUAL_WIDTH, y: Math.random() * VIRTUAL_HEIGHT, s: 1.2 + Math.random() * 1.2, a: Math.random(), speed: 0.7 });
+      }
+      for (let i = 0; i < 15; i++) {
+        starsNear.push({ x: Math.random() * VIRTUAL_WIDTH, y: Math.random() * VIRTUAL_HEIGHT, s: 2.0 + Math.random() * 1.5, a: Math.random(), speed: 1.5 });
+      }
+
+      // City silhouettes
+      const buildings = [];
+      let buildingX = 0;
+      while (buildingX < VIRTUAL_WIDTH + 100) {
+        const w = 24 + Math.random() * 32;
+        const h = 40 + Math.random() * 85;
+        buildings.push({ x: buildingX, w, h, light: Math.random() > 0.4 });
+        buildingX += w + 4;
+      }
+
+      // --- GAME ENTITIES ---
+      let lasers = [];
+      let obstacles = [];
+      let monsters = [];
+      let particles = [];
+      let scorePops = [];
+
+      let obstacleTimer = 1.0;
+      let monsterTimer = 1.8;
+
+      // Reset all game elements
+      function startNewGame() {
+        score = 0;
+        isNewHighScore = false;
+        distanceTravelled = 0;
+        lasers = [];
+        obstacles = [];
+        monsters = [];
+        particles = [];
+        scorePops = [];
+        obstacleTimer = 1.2;
+        monsterTimer = 2.0;
+        player.reset();
+        gameState = STATES.PLAYING;
+      }
+
+      // --- SPAWNERS ---
+      function spawnObstacle() {
+        const gap = 142; // vertical clearance
+        const margin = 55;
+        const minY = CEILING_Y + margin;
+        const maxY = FLOOR_Y - margin - gap;
+        const gapY = minY + Math.random() * (maxY - minY);
+        const speed = 150 + Math.min(score * 2.2, 90);
+
+        obstacles.push({
+          x: VIRTUAL_WIDTH + 30,
+          width: 52,
+          gapY: gapY,
+          gapHeight: gap,
+          speed: speed,
+          passed: false,
+          pulse: Math.random() * Math.PI
+        });
+      }
+
+      function spawnMonster() {
+        const margin = 65;
+        const baseY = CEILING_Y + margin + Math.random() * (FLOOR_Y - CEILING_Y - margin * 2);
+        const speed = 160 + Math.random() * 40 + Math.min(score * 2.0, 70);
+
+        monsters.push({
+          x: VIRTUAL_WIDTH + 30,
+          baseY: baseY,
+          y: baseY,
+          radius: 15,
+          speed: speed,
+          waveAmp: 25 + Math.random() * 25,
+          waveFreq: 2.4 + Math.random() * 1.6,
+          phase: Math.random() * Math.PI * 2,
+          eyeGlow: 0,
+          type: Math.random() > 0.4 ? 'alien_drone' : 'cyber_bat'
+        });
+      }
+
+      function spawnLaser() {
+        const now = globalTime;
+        if (now - player.lastShootTime < player.shootCooldown) return;
+        player.lastShootTime = now;
+
+        initAudio();
+        playLaserSound();
+
+        // Dual laser plasma bolt
+        lasers.push({
+          x: player.x + 22,
+          y: player.y - 4,
+          vx: 720,
+          width: 18,
+          height: 4
+        });
+        lasers.push({
+          x: player.x + 22,
+          y: player.y + 4,
+          vx: 720,
+          width: 18,
+          height: 4
+        });
+
+        // Muzzle flare particles
+        for (let i = 0; i < 4; i++) {
+          particles.push({
+            x: player.x + 24,
+            y: player.y + (Math.random() * 8 - 4),
+            vx: 80 + Math.random() * 100,
+            vy: (Math.random() - 0.5) * 60,
+            color: '#00f0ff',
+            size: 2.5 + Math.random() * 2,
+            life: 0.15,
+            maxLife: 0.15
+          });
+        }
+      }
+
+      function spawnExplosion(x, y, color, count = 20) {
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 40 + Math.random() * 220;
+          particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            color: color || (Math.random() > 0.5 ? '#ff2a85' : '#00f0ff'),
+            size: 2 + Math.random() * 3.5,
+            life: 0.4 + Math.random() * 0.35,
+            maxLife: 0.75
+          });
+        }
+      }
+
+      function addScorePop(x, y, text, color) {
+        scorePops.push({
+          x: x,
+          y: y,
+          text: text,
+          color: color || '#00f0ff',
+          life: 0.8,
+          maxLife: 0.8
+        });
+      }
+
+      function triggerCrash() {
+        if (gameState !== STATES.PLAYING) return;
+        gameState = STATES.GAMEOVER;
+        gameOverTime = globalTime;
+        screenShake = 0.45;
+
+        initAudio();
+        playCrashSound();
+
+        // Big fiery cyan/orange debris burst
+        spawnExplosion(player.x, player.y, '#ff4757', 35);
+        spawnExplosion(player.x, player.y, '#ffa502', 25);
+        spawnExplosion(player.x, player.y, '#00f0ff', 25);
+
+        if (score > highScore) {
+          highScore = score;
+          isNewHighScore = true;
+          try {
+            localStorage.setItem('power_flying_bird_hi', highScore.toString());
+          } catch (e) {}
+        }
+      }
+
+      // --- UPDATE LOOP ---
+      function update(dt) {
+        globalTime += dt;
+        if (screenShake > 0) {
+          screenShake = Math.max(0, screenShake - dt * 1.5);
+        }
+
+        // Starfield and building parallax (always active for alive feel)
+        for (const s of starsFar) {
+          s.x -= 20 * dt;
+          if (s.x < 0) s.x = VIRTUAL_WIDTH;
+        }
+        for (const s of starsMid) {
+          s.x -= 55 * dt;
+          if (s.x < 0) s.x = VIRTUAL_WIDTH;
+        }
+        for (const s of starsNear) {
+          s.x -= 120 * dt;
+          if (s.x < 0) s.x = VIRTUAL_WIDTH;
+        }
+        for (const b of buildings) {
+          b.x -= 35 * dt;
+          if (b.x + b.w < 0) {
+            b.x = VIRTUAL_WIDTH + 10;
+          }
+        }
+
+        // State-specific logic
+        if (gameState === STATES.START) {
+          // Gentle idle bobbing on start screen
+          player.y = 290 + Math.sin(globalTime * 3.5) * 14;
+          player.angle = Math.sin(globalTime * 3.5) * 0.08;
+          player.wingAngle = Math.sin(globalTime * 8) * 0.4;
+          return;
+        }
+
+        if (gameState === STATES.GAMEOVER) {
+          // Update particles and floating popups during game over
+          updateParticles(dt);
+          return;
+        }
+
+        // --- PLAYING STATE ---
+        distanceTravelled += 160 * dt;
+
+        // Player Vertical Flight Movement
+        if (input.up && !input.down) {
+          player.vy -= player.accel * dt;
+        } else if (input.down && !input.up) {
+          player.vy += player.accel * dt;
+        } else {
+          // Snappy hover deceleration
+          player.vy *= player.damping;
+          if (Math.abs(player.vy) < 5) player.vy = 0;
+        }
+
+        // Clamp speed
+        player.vy = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.vy));
+        player.y += player.vy * dt;
+
+        // Directional tilt angle smoothly tracks vertical speed
+        const targetAngle = (player.vy / player.maxSpeed) * 0.45;
+        player.angle += (targetAngle - player.angle) * 0.22;
+
+        // Wing flapping cycle
+        const flapSpeed = 12 + Math.abs(player.vy) * 0.05;
+        player.wingAngle = Math.sin(globalTime * flapSpeed) * 0.55;
+
+        // Bounds collision check (Ceiling / Floor)
+        if (player.y - player.radius <= CEILING_Y) {
+          player.y = CEILING_Y + player.radius;
+          triggerCrash();
+          return;
+        }
+        if (player.y + player.radius >= FLOOR_Y) {
+          player.y = FLOOR_Y - player.radius;
+          triggerCrash();
+          return;
+        }
+
+        // Thruster exhaust particles
+        if (Math.random() < 0.85) {
+          particles.push({
+            x: player.x - 18,
+            y: player.y + (Math.random() * 6 - 3),
+            vx: -180 - Math.random() * 80,
+            vy: (Math.random() - 0.5) * 40,
+            color: Math.random() > 0.4 ? '#00f0ff' : '#a855f7',
+            size: 2.5 + Math.random() * 2,
+            life: 0.25,
+            maxLife: 0.25
+          });
+        }
+
+        // Auto/Continuous fire if space held
+        if (input.fire) {
+          spawnLaser();
+        }
+
+        // Spawn Obstacles
+        obstacleTimer -= dt;
+        if (obstacleTimer <= 0) {
+          spawnObstacle();
+          // Slightly accelerate spawn rate with score progression
+          obstacleTimer = Math.max(1.8, 2.6 - score * 0.02);
+        }
+
+        // Spawn Monsters
+        monsterTimer -= dt;
+        if (monsterTimer <= 0) {
+          spawnMonster();
+          monsterTimer = Math.max(1.5, 2.5 - score * 0.025);
+        }
+
+        // Update Lasers
+        for (let i = lasers.length - 1; i >= 0; i--) {
+          const l = lasers[i];
+          l.x += l.vx * dt;
+
+          // Trail sparks
+          if (Math.random() < 0.3) {
+            particles.push({
+              x: l.x - 6,
+              y: l.y,
+              vx: -50,
+              vy: (Math.random() - 0.5) * 20,
+              color: '#00f0ff',
+              size: 1.5,
+              life: 0.12,
+              maxLife: 0.12
+            });
+          }
+
+          if (l.x > VIRTUAL_WIDTH + 40) {
+            lasers.splice(i, 1);
+          }
+        }
+
+        // Update Obstacles
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const ob = obstacles[i];
+          ob.x -= ob.speed * dt;
+          ob.pulse += dt * 4;
+
+          // Gate passing check
+          if (!ob.passed && ob.x + ob.width < player.x) {
+            ob.passed = true;
+            score += 1;
+            playGateScoreSound();
+            addScorePop(player.x + 10, player.y - 20, '+1', '#00f0ff');
+          }
+
+          // Player collision with obstacle
+          const topBox = { x: ob.x, y: 0, w: ob.width, h: ob.gapY };
+          const botBox = { x: ob.x, y: ob.gapY + ob.gapHeight, w: ob.width, h: VIRTUAL_HEIGHT - (ob.gapY + ob.gapHeight) };
+
+          if (circleRectCollide(player.x, player.y, player.radius - 2, topBox) ||
+              circleRectCollide(player.x, player.y, player.radius - 2, botBox)) {
+            triggerCrash();
+            return;
+          }
+
+          // Laser collision with obstacle (absorbs lasers)
+          for (let li = lasers.length - 1; li >= 0; li--) {
+            const l = lasers[li];
+            if (rectIntersect(l.x, l.y - 2, l.width, l.height, topBox.x, topBox.y, topBox.w, topBox.h) ||
+                rectIntersect(l.x, l.y - 2, l.width, l.height, botBox.x, botBox.y, botBox.w, botBox.h)) {
+              spawnExplosion(l.x, l.y, '#00f0ff', 5);
+              lasers.splice(li, 1);
+            }
+          }
+
+          if (ob.x + ob.width < -50) {
+            obstacles.splice(i, 1);
+          }
+        }
+
+        // Update Monsters
+        for (let i = monsters.length - 1; i >= 0; i--) {
+          const m = monsters[i];
+          m.x -= m.speed * dt;
+          m.y = m.baseY + Math.sin(globalTime * m.waveFreq + m.phase) * m.waveAmp;
+          m.eyeGlow = Math.sin(globalTime * 8);
+
+          // Player collision with Monster
+          const distSq = (player.x - m.x) * (player.x - m.x) + (player.y - m.y) * (player.y - m.y);
+          const hitRadius = player.radius + m.radius - 3;
+          if (distSq < hitRadius * hitRadius) {
+            triggerCrash();
+            return;
+          }
+
+          // Laser collision with Monster
+          let monsterHit = false;
+          for (let li = lasers.length - 1; li >= 0; li--) {
+            const l = lasers[li];
+            const ldistSq = (l.x - m.x) * (l.x - m.x) + (l.y - m.y) * (l.y - m.y);
+            if (ldistSq < (m.radius + 8) * (m.radius + 8)) {
+              monsterHit = true;
+              lasers.splice(li, 1);
+              break;
+            }
+          }
+
+          if (monsterHit) {
+            score += 2;
+            playMonsterExplosionSound();
+            spawnExplosion(m.x, m.y, m.type === 'alien_drone' ? '#00f0ff' : '#ff2a85', 24);
+            addScorePop(m.x, m.y - 12, '+2', '#ff2a85');
+            monsters.splice(i, 1);
+            continue;
+          }
+
+          if (m.x + m.radius < -40) {
+            monsters.splice(i, 1);
+          }
+        }
+
+        updateParticles(dt);
+      }
+
+      function updateParticles(dt) {
+        // Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.life -= dt;
+          if (p.life <= 0) {
+            particles.splice(i, 1);
+          }
+        }
+
+        // Score popups
+        for (let i = scorePops.length - 1; i >= 0; i--) {
+          const pop = scorePops[i];
+          pop.y -= 38 * dt;
+          pop.life -= dt;
+          if (pop.life <= 0) {
+            scorePops.splice(i, 1);
+          }
+        }
+      }
+
+      // --- COLLISION MATH HELPERS ---
+      function circleRectCollide(cx, cy, radius, rx, ry, rw, rh) {
+        if (typeof rx === 'object') {
+          rh = rx.h;
+          rw = rx.w;
+          ry = rx.y;
+          rx = rx.x;
+        }
+        const closestX = Math.max(rx, Math.min(cx, rx + rw));
+        const closestY = Math.max(ry, Math.min(cy, ry + rh));
+        const dx = cx - closestX;
+        const dy = cy - closestY;
+        return (dx * dx + dy * dy) < (radius * radius);
+      }
+
+      function rectIntersect(x1, y1, w1, h1, x2, y2, w2, h2) {
+        return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
+      }
+
+      // --- RENDERING ROUTINES ---
+      function render() {
+        ctx.save();
+
+        // Screen Shake
+        if (screenShake > 0) {
+          const mag = screenShake * 16;
+          ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
+        }
+
+        // 1. Cosmic Gradient Sky
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, VIRTUAL_HEIGHT);
+        bgGrad.addColorStop(0, '#060513');
+        bgGrad.addColorStop(0.35, '#0b0821');
+        bgGrad.addColorStop(0.7, '#150f33');
+        bgGrad.addColorStop(1, '#070617');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+
+        // Distant Nebula Glow
+        const nebula = ctx.createRadialGradient(260, 200, 10, 260, 200, 160);
+        nebula.addColorStop(0, 'rgba(168, 85, 247, 0.14)');
+        nebula.addColorStop(0.6, 'rgba(0, 240, 255, 0.05)');
+        nebula.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = nebula;
+        ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+
+        // 2. Parallax Twinkling Stars
+        ctx.fillStyle = '#ffffff';
+        for (const s of starsFar) {
+          const alpha = 0.3 + 0.5 * Math.sin(globalTime * 3 + s.a * 10);
+          ctx.globalAlpha = Math.max(0.1, alpha);
+          ctx.fillRect(s.x, s.y, s.s, s.s);
+        }
+        ctx.fillStyle = '#a5f3fc';
+        for (const s of starsMid) {
+          const alpha = 0.5 + 0.4 * Math.sin(globalTime * 4 + s.a * 8);
+          ctx.globalAlpha = Math.max(0.1, alpha);
+          ctx.fillRect(s.x, s.y, s.s, s.s);
+        }
+        ctx.fillStyle = '#ffffff';
+        for (const s of starsNear) {
+          ctx.globalAlpha = 0.85;
+          ctx.fillRect(s.x, s.y, s.s, s.s);
+        }
+        ctx.globalAlpha = 1.0;
+
+        // 3. Cyber City Skyline Silhouettes
+        ctx.fillStyle = '#0a081a';
+        for (const b of buildings) {
+          const by = FLOOR_Y - b.h;
+          ctx.fillRect(b.x, by, b.w, b.h);
+          // Neon rooftop antenna or window
+          if (b.light) {
+            ctx.fillStyle = '#ff2a85';
+            ctx.fillRect(b.x + b.w / 2 - 1, by - 6, 2, 6);
+            ctx.fillStyle = '#00f0ff';
+            ctx.fillRect(b.x + 4, by + 12, 3, 3);
+            ctx.fillRect(b.x + b.w - 7, by + 24, 3, 3);
+            ctx.fillStyle = '#0a081a';
+          }
+        }
+
+        // 4. Moving Hazard Ceilings & Floors
+        renderHazardBoundaries();
+
+        // 5. Obstacles (Metal Sci-Fi Columns)
+        for (const ob of obstacles) {
+          renderObstacle(ob);
+        }
+
+        // 6. Monsters
+        for (const m of monsters) {
+          renderMonster(m);
+        }
+
+        // 7. Lasers
+        renderLasers();
+
+        // 8. Particles
+        renderParticles();
+
+        // 9. Player (Power Bird)
+        if (gameState !== STATES.GAMEOVER) {
+          renderPowerBird(player.x, player.y, player.angle, player.wingAngle);
+        }
+
+        // 10. Score Popups
+        for (const pop of scorePops) {
+          const progress = pop.life / pop.maxLife;
+          ctx.save();
+          ctx.font = 'bold 15px "Segoe UI", sans-serif';
+          ctx.fillStyle = pop.color;
+          ctx.shadowColor = pop.color;
+          ctx.shadowBlur = 8;
+          ctx.globalAlpha = progress;
+          ctx.fillText(pop.text, pop.x, pop.y);
+          ctx.restore();
+        }
+
+        // 11. HUD & Overlays
+        renderHUD();
+
+        ctx.restore();
+      }
+
+      // --- DETAILED PROCEDURAL RENDERING ---
+
+      function renderHazardBoundaries() {
+        const offset = (globalTime * 90) % 24;
+
+        // Top Ceiling Hazard Grid
+        ctx.fillStyle = '#080d1a';
+        ctx.fillRect(0, 0, VIRTUAL_WIDTH, CEILING_Y);
+
+        // Ceiling Caution Stripes
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, CEILING_Y - 10, VIRTUAL_WIDTH, 10);
+        ctx.clip();
+        for (let x = -24 + offset; x < VIRTUAL_WIDTH + 24; x += 24) {
+          ctx.fillStyle = '#ffbe0b';
+          ctx.beginPath();
+          ctx.moveTo(x, CEILING_Y);
+          ctx.lineTo(x + 12, CEILING_Y);
+          ctx.lineTo(x + 22, CEILING_Y - 10);
+          ctx.lineTo(x + 10, CEILING_Y - 10);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // Glowing Ceiling Laser Line
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(0, CEILING_Y);
+        ctx.lineTo(VIRTUAL_WIDTH, CEILING_Y);
+        ctx.stroke();
+
+        // Bottom Floor Hazard Grid
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#080d1a';
+        ctx.fillRect(0, FLOOR_Y, VIRTUAL_WIDTH, VIRTUAL_HEIGHT - FLOOR_Y);
+
+        // Floor Caution Stripes
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, FLOOR_Y, VIRTUAL_WIDTH, 10);
+        ctx.clip();
+        for (let x = -24 + offset; x < VIRTUAL_WIDTH + 24; x += 24) {
+          ctx.fillStyle = '#ff0055';
+          ctx.beginPath();
+          ctx.moveTo(x, FLOOR_Y + 10);
+          ctx.lineTo(x + 12, FLOOR_Y + 10);
+          ctx.lineTo(x + 22, FLOOR_Y);
+          ctx.lineTo(x + 10, FLOOR_Y);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // Perspective Floor Grid Lines
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
+        ctx.lineWidth = 1;
+        for (let y = FLOOR_Y + 14; y < VIRTUAL_HEIGHT; y += 12) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(VIRTUAL_WIDTH, y);
+          ctx.stroke();
+        }
+        for (let x = (offset * 1.5) % 36; x < VIRTUAL_WIDTH; x += 36) {
+          ctx.beginPath();
+          ctx.moveTo(x, FLOOR_Y + 10);
+          ctx.lineTo(x * 1.2 - 30, VIRTUAL_HEIGHT);
+          ctx.stroke();
+        }
+
+        // Glowing Floor Hazard Line
+        ctx.strokeStyle = '#ff0055';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#ff0055';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(0, FLOOR_Y);
+        ctx.lineTo(VIRTUAL_WIDTH, FLOOR_Y);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      function renderObstacle(ob) {
+        ctx.save();
+        const topHeight = ob.gapY;
+        const botY = ob.gapY + ob.gapHeight;
+        const botHeight = VIRTUAL_HEIGHT - botY;
+
+        // Top Column Body
+        const topGrad = ctx.createLinearGradient(ob.x, 0, ob.x + ob.width, 0);
+        topGrad.addColorStop(0, '#101726');
+        topGrad.addColorStop(0.5, '#1e293b');
+        topGrad.addColorStop(1, '#0b1120');
+
+        ctx.fillStyle = topGrad;
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1.5;
+
+        // Top Pylon
+        ctx.fillRect(ob.x, 0, ob.width, topHeight);
+        ctx.strokeRect(ob.x, 0, ob.width, topHeight);
+
+        // Bottom Pylon
+        ctx.fillRect(ob.x, botY, ob.width, botHeight);
+        ctx.strokeRect(ob.x, botY, ob.width, botHeight);
+
+        // Neon Conduit Strip on Column
+        const pulse = 0.5 + 0.5 * Math.sin(ob.pulse);
+        ctx.strokeStyle = `rgba(0, 240, 255, ${0.4 + pulse * 0.5})`;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 8;
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.moveTo(ob.x + ob.width / 2, 0);
+        ctx.lineTo(ob.x + ob.width / 2, topHeight - 8);
+        ctx.moveTo(ob.x + ob.width / 2, botY + 8);
+        ctx.lineTo(ob.x + ob.width / 2, VIRTUAL_HEIGHT);
+        ctx.stroke();
+
+        // Emitter Caps (Energy Nodes with Arcing Glow)
+        ctx.fillStyle = '#0284c7';
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 12;
+        ctx.fillRect(ob.x + 4, topHeight - 8, ob.width - 8, 8);
+        ctx.fillRect(ob.x + 4, botY, ob.width - 8, 8);
+
+        // Laser Warning Barbs
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(ob.x + ob.width / 2, topHeight - 4, 3 + pulse * 1.5, 0, Math.PI * 2);
+        ctx.arc(ob.x + ob.width / 2, botY + 4, 3 + pulse * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function renderMonster(m) {
+        ctx.save();
+        ctx.translate(m.x, m.y);
+
+        if (m.type === 'alien_drone') {
+          // Alien Plasma Eye-Drone
+          // Outer Ring / Tentacles
+          ctx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
+          ctx.lineWidth = 2;
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 10;
+
+          // Drone Chassis
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.arc(0, 0, m.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          // Sinuous Mech Tentacles behind drone
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = '#00f0ff';
+          for (let i = -1; i <= 1; i += 2) {
+            ctx.beginPath();
+            ctx.moveTo(6, i * 6);
+            ctx.quadraticCurveTo(18 + Math.sin(globalTime * 8) * 4, i * 14, 26, i * 10);
+            ctx.stroke();
+          }
+
+          // Glowing Cyber Iris & Pupil
+          const eyePulse = 0.7 + 0.3 * Math.sin(globalTime * 9);
+          ctx.fillStyle = '#ff2a85';
+          ctx.shadowColor = '#ff2a85';
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.arc(-2, 0, 7 * eyePulse, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(-3, 0, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Crimson Cyber Demon Bat
+          // Flapping Wings
+          const wingSpread = Math.sin(globalTime * 14) * 12;
+
+          ctx.fillStyle = '#ff0055';
+          ctx.shadowColor = '#ff0055';
+          ctx.shadowBlur = 10;
+
+          // Top & Bottom bat wings
+          ctx.beginPath();
+          ctx.moveTo(-2, -4);
+          ctx.lineTo(8, -18 + wingSpread);
+          ctx.lineTo(-12, -8);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.moveTo(-2, 4);
+          ctx.lineTo(8, 18 - wingSpread);
+          ctx.lineTo(-12, 8);
+          ctx.closePath();
+          ctx.fill();
+
+          // Body Core
+          ctx.fillStyle = '#2a0815';
+          ctx.strokeStyle = '#ff0055';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 11, 7, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          // Glowing Red Eye
+          ctx.fillStyle = '#ffbe0b';
+          ctx.shadowColor = '#ffbe0b';
+          ctx.beginPath();
+          ctx.arc(-5, 0, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+
+      function renderLasers() {
+        ctx.save();
+        for (const l of lasers) {
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 12;
+
+          // Outer Neon Glow Bolt
+          ctx.fillStyle = '#00f0ff';
+          ctx.beginPath();
+          ctx.roundRect(l.x, l.y - l.height / 2, l.width, l.height, 2);
+          ctx.fill();
+
+          // Inner Intense White Core
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(l.x + 3, l.y - 1, l.width - 4, 2, 1);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function renderParticles() {
+        ctx.save();
+        for (const p of particles) {
+          const alpha = Math.max(0, p.life / p.maxLife);
+          ctx.fillStyle = p.color;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 6;
+          ctx.globalAlpha = alpha;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function renderPowerBird(x, y, angle, wingAngle) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+
+        // 1. Thruster Plasma Jet Flame (Rear)
+        const jetLen = 14 + Math.random() * 10;
+        const jetGrad = ctx.createLinearGradient(-16, 0, -16 - jetLen, 0);
+        jetGrad.addColorStop(0, '#ffffff');
+        jetGrad.addColorStop(0.3, '#00f0ff');
+        jetGrad.addColorStop(0.8, '#a855f7');
+        jetGrad.addColorStop(1, 'rgba(0,0,0,0)');
+
+        ctx.fillStyle = jetGrad;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.moveTo(-14, -5);
+        ctx.lineTo(-14 - jetLen, 0);
+        ctx.lineTo(-14, 5);
+        ctx.closePath();
+        ctx.fill();
+
+        // 2. Main Cybernetic Fuselage
+        const bodyGrad = ctx.createLinearGradient(-14, -10, 20, 10);
+        bodyGrad.addColorStop(0, '#0f172a');
+        bodyGrad.addColorStop(0.5, '#1e293b');
+        bodyGrad.addColorStop(1, '#334155');
+
+        ctx.fillStyle = bodyGrad;
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 6;
+
+        ctx.beginPath();
+        ctx.moveTo(22, 0); // Beak tip
+        ctx.lineTo(8, -10); // Forehead
+        ctx.lineTo(-12, -8); // Back
+        ctx.lineTo(-16, 0); // Tail engine
+        ctx.lineTo(-12, 8); // Belly rear
+        ctx.lineTo(8, 7); // Chest
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 3. Gold Chrome Beak Emitter
+        ctx.fillStyle = '#ffbe0b';
+        ctx.shadowColor = '#ffbe0b';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(14, -4);
+        ctx.lineTo(24, 0);
+        ctx.lineTo(14, 3);
+        ctx.closePath();
+        ctx.fill();
+
+        // 4. Glowing Cyan Visor Cockpit
+        ctx.fillStyle = '#00f0ff';
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(4, -5);
+        ctx.lineTo(13, -2);
+        ctx.lineTo(6, 1);
+        ctx.lineTo(0, -2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Visor Highlight
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(8, -2, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 5. Articulated Mechanical Aerodynamic Wings
+        ctx.save();
+        ctx.translate(-2, 0);
+        ctx.rotate(wingAngle);
+
+        // Wing Blade Gradient
+        const wingGrad = ctx.createLinearGradient(-10, 0, 10, -20);
+        wingGrad.addColorStop(0, '#1e293b');
+        wingGrad.addColorStop(1, '#0284c7');
+        ctx.fillStyle = wingGrad;
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+
+        // Top Wing Blade
+        ctx.beginPath();
+        ctx.moveTo(4, -2);
+        ctx.lineTo(-6, -18);
+        ctx.lineTo(-16, -14);
+        ctx.lineTo(-4, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Wing Energy Strip
+        ctx.strokeStyle = '#00f0ff';
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(-2, -3);
+        ctx.lineTo(-7, -15);
+        ctx.stroke();
+
+        ctx.restore();
+
+        ctx.restore();
+      }
+
+      function renderHUD() {
+        if (gameState === STATES.PLAYING) {
+          // Top Arcade Bar
+          ctx.save();
+          ctx.textAlign = 'left';
+          ctx.font = 'bold 16px "Segoe UI", sans-serif';
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 8;
+          ctx.fillText(`SCORE ${score.toString().padStart(3, '0')}`, 18, 28);
+
+          ctx.textAlign = 'right';
+          ctx.font = '13px "Segoe UI", sans-serif';
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.shadowBlur = 0;
+          ctx.fillText(`BEST ${highScore}`, VIRTUAL_WIDTH - 50, 27);
+
+          // Threat Intensity Indicator bar
+          const threat = Math.min(1.0, score / 60);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+          ctx.fillRect(18, 35, 120, 3);
+          const barGrad = ctx.createLinearGradient(18, 0, 138, 0);
+          barGrad.addColorStop(0, '#00f0ff');
+          barGrad.addColorStop(1, '#ff0055');
+          ctx.fillStyle = barGrad;
+          ctx.fillRect(18, 35, 120 * threat, 3);
+          ctx.restore();
+        } else if (gameState === STATES.START) {
+          renderStartScreen();
+        } else if (gameState === STATES.GAMEOVER) {
+          renderGameOverScreen();
+        }
+      }
+
+      function renderStartScreen() {
+        ctx.save();
+        ctx.textAlign = 'center';
+
+        // Dim backdrop slightly
+        ctx.fillStyle = 'rgba(5, 5, 16, 0.6)';
+        ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+
+        // Cyber Category Pill
+        ctx.font = 'bold 11px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#a855f7';
+        ctx.shadowColor = '#a855f7';
+        ctx.shadowBlur = 6;
+        ctx.fillText('CYBER ARCADE SHOOT-\'EM-UP', VIRTUAL_WIDTH / 2, 115);
+
+        // Title: POWER FLYING BIRD
+        ctx.font = '900 32px "Segoe UI", sans-serif';
+        const titleGrad = ctx.createLinearGradient(0, 130, 0, 185);
+        titleGrad.addColorStop(0, '#ffffff');
+        titleGrad.addColorStop(0.5, '#00f0ff');
+        titleGrad.addColorStop(1, '#0284c7');
+        ctx.fillStyle = titleGrad;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 18;
+        ctx.fillText('POWER FLYING', VIRTUAL_WIDTH / 2, 155);
+        ctx.fillText('BIRD', VIRTUAL_WIDTH / 2, 192);
+
+        // High Score display
+        ctx.font = '14px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#ffbe0b';
+        ctx.shadowColor = '#ffbe0b';
+        ctx.shadowBlur = 8;
+        ctx.fillText(`🏆 HIGH SCORE: ${highScore}`, VIRTUAL_WIDTH / 2, 230);
+
+        // Center Bird Preview Frame
+        renderPowerBird(VIRTUAL_WIDTH / 2, 290, player.angle, player.wingAngle);
+
+        // Controls Instruction Card
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(40, 350, VIRTUAL_WIDTH - 80, 110, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = 'bold 12px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText('FLIGHT CONTROLS', VIRTUAL_WIDTH / 2, 375);
+
+        ctx.font = '12px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillText('▲ / W : Fly Up   •   ▼ / S : Fly Down', VIRTUAL_WIDTH / 2, 400);
+        ctx.fillText('SPACE / Tap : Fire High-Energy Lasers', VIRTUAL_WIDTH / 2, 422);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '11px "Segoe UI", sans-serif';
+        ctx.fillText('Stable hover physics • Destroy monsters (+2)', VIRTUAL_WIDTH / 2, 442);
+
+        // Pulsing Start Prompt
+        const blink = 0.5 + 0.5 * Math.sin(globalTime * 6);
+        ctx.font = 'bold 16px "Segoe UI", sans-serif';
+        ctx.fillStyle = `rgba(0, 240, 255, ${0.4 + blink * 0.6})`;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 10;
+        ctx.fillText('PRESS SPACE OR TAP TO PLAY', VIRTUAL_WIDTH / 2, 505);
+
+        ctx.restore();
+      }
+
+      function renderGameOverScreen() {
+        ctx.save();
+        ctx.textAlign = 'center';
+
+        // Dark overlay
+        ctx.fillStyle = 'rgba(5, 5, 16, 0.78)';
+        ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+
+        // Title Alert
+        ctx.font = '900 28px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#ff0055';
+        ctx.shadowColor = '#ff0055';
+        ctx.shadowBlur = 18;
+        ctx.fillText('GAME OVER', VIRTUAL_WIDTH / 2, 170);
+
+        // Score Card Box
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.strokeStyle = isNewHighScore ? '#ffbe0b' : 'rgba(255, 0, 85, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(50, 210, VIRTUAL_WIDTH - 100, 160, 14);
+        ctx.fill();
+        ctx.stroke();
+
+        if (isNewHighScore) {
+          const badgeBlink = 0.6 + 0.4 * Math.sin(globalTime * 8);
+          ctx.font = 'bold 12px "Segoe UI", sans-serif';
+          ctx.fillStyle = `rgba(255, 190, 11, ${badgeBlink})`;
+          ctx.shadowColor = '#ffbe0b';
+          ctx.shadowBlur = 10;
+          ctx.fillText('★ NEW HIGH SCORE! ★', VIRTUAL_WIDTH / 2, 238);
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.font = '13px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('FINAL SCORE', VIRTUAL_WIDTH / 2, 268);
+
+        ctx.font = 'bold 44px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 12;
+        ctx.fillText(score.toString(), VIRTUAL_WIDTH / 2, 312);
+        ctx.shadowBlur = 0;
+
+        ctx.font = '14px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#ffbe0b';
+        ctx.fillText(`BEST SCORE: ${highScore}`, VIRTUAL_WIDTH / 2, 345);
+
+        // Restart Prompt (respects 300ms cooldown)
+        const canRestart = globalTime - gameOverTime > 0.3;
+        if (canRestart) {
+          const blink = 0.5 + 0.5 * Math.sin(globalTime * 6);
+          ctx.font = 'bold 15px "Segoe UI", sans-serif';
+          ctx.fillStyle = `rgba(0, 240, 255, ${0.4 + blink * 0.6})`;
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 10;
+          ctx.fillText('PRESS SPACE OR TAP TO RESTART', VIRTUAL_WIDTH / 2, 420);
+        }
+
+        ctx.restore();
+      }
+
+      // --- USER INPUT & EVENT LISTENERS ---
+
+      function handleActionTrigger() {
+        initAudio();
+        if (gameState === STATES.START) {
+          startNewGame();
+        } else if (gameState === STATES.GAMEOVER) {
+          if (globalTime - gameOverTime > 0.3) {
+            startNewGame();
+          }
+        }
+      }
+
+      // Keyboard Controls
+      window.addEventListener('keydown', (e) => {
+        if (e.repeat && e.code !== 'Space') return;
+
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+          input.up = true;
+          e.preventDefault();
+        } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+          input.down = true;
+          e.preventDefault();
+        } else if (e.code === 'Space') {
+          input.fire = true;
+          handleActionTrigger();
+          e.preventDefault();
+        } else if (e.code === 'KeyM') {
+          toggleMute();
+          e.preventDefault();
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+          input.up = false;
+          e.preventDefault();
+        } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+          input.down = false;
+          e.preventDefault();
+        } else if (e.code === 'Space') {
+          input.fire = false;
+          e.preventDefault();
+        }
+      });
+
+      // Touch Buttons Setup
+      const btnUp = document.getElementById('btn-up');
+      const btnDown = document.getElementById('btn-down');
+      const btnFire = document.getElementById('btn-fire');
+
+      function bindTouchButton(el, onDown, onUp) {
+        const press = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          initAudio();
+          el.classList.add('active');
+          onDown();
+        };
+        const release = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          el.classList.remove('active');
+          onUp();
+        };
+
+        el.addEventListener('touchstart', press, { passive: false });
+        el.addEventListener('touchend', release, { passive: false });
+        el.addEventListener('touchcancel', release, { passive: false });
+        el.addEventListener('mousedown', press);
+        el.addEventListener('mouseup', release);
+        el.addEventListener('mouseleave', release);
+      }
+
+      bindTouchButton(btnUp, () => { input.up = true; }, () => { input.up = false; });
+      bindTouchButton(btnDown, () => { input.down = true; }, () => { input.down = false; });
+      bindTouchButton(btnFire, () => {
+        input.fire = true;
+        handleActionTrigger();
+        if (gameState === STATES.PLAYING) spawnLaser();
+      }, () => {
+        input.fire = false;
+      });
+
+      // Canvas Tap & Drag interaction for screen control
+      let isDragging = false;
+      let lastTouchY = 0;
+
+      canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleActionTrigger();
+        if (e.touches.length > 0) {
+          isDragging = true;
+          lastTouchY = e.touches[0].clientY;
+        }
+        if (gameState === STATES.PLAYING) {
+          spawnLaser();
+        }
+      }, { passive: false });
+
+      canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!isDragging || e.touches.length === 0) return;
+        const currentY = e.touches[0].clientY;
+        const deltaY = currentY - lastTouchY;
+        lastTouchY = currentY;
+
+        if (deltaY < -3) {
+          input.up = true;
+          input.down = false;
+        } else if (deltaY > 3) {
+          input.down = true;
+          input.up = false;
+        }
+      }, { passive: false });
+
+      canvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        isDragging = false;
+        input.up = false;
+        input.down = false;
+      }, { passive: false });
+
+      canvas.addEventListener('mousedown', (e) => {
+        if (e.target === canvas) {
+          handleActionTrigger();
+          if (gameState === STATES.PLAYING) {
+            spawnLaser();
+          }
+        }
+      });
+
+      // --- MAIN GAME LOOP ---
+      let lastFrameTime = performance.now();
+
+      function gameLoop(now) {
+        const dt = Math.min((now - lastFrameTime) / 1000, 0.05); // Cap delta to prevent tunneling
+        lastFrameTime = now;
+
+        update(dt);
+        render();
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      requestAnimationFrame(gameLoop);
+
+    })();
+  </script>
+</body>
+</html>
